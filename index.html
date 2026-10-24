@@ -14059,7 +14059,7 @@
 
     // Global Page Search
     // ==========================================================================
-    // 全章横断・超高速テキスト検索システム (Global Search Engine)
+    // 全章横断・超高速テキスト検索システム (Global Search Engine - Complete Edition)
     // ==========================================================================
     let globalSearchIndex = null;
 
@@ -14067,69 +14067,137 @@
       if (globalSearchIndex && globalSearchIndex.length > 0) return globalSearchIndex;
 
       const index = [];
-      const panels = document.querySelectorAll('.view-panel');
 
-      panels.forEach(panel => {
+      function cleanText(txt) {
+        if (!txt) return '';
+        return txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+
+      // 1. 全章のデータオブジェクト（JS変数）から直接、推奨本文と補足説明を完全抽出
+      const dataSources = [
+        // 第2章
+        { viewId: 'view-sec-2-1', secCode: 'sec21', secTitle: '2.1 脳卒中後リハビリテーションケアの組織', getData: () => typeof SEC21_RECS !== 'undefined' ? SEC21_RECS : null },
+        { viewId: 'view-sec-2-2', secCode: 'sec22', secTitle: '2.2 多職種連携とケアの移行', getData: () => typeof SEC22_RECS !== 'undefined' ? SEC22_RECS : null },
+        // 第3章
+        { viewId: 'view-sec-3-1', secCode: 'sec31', secTitle: '3.1 再発予防と内科的管理', getData: () => typeof SEC31_RECS !== 'undefined' ? SEC31_RECS : null },
+        { viewId: 'view-sec-3-2', secCode: 'sec32', secTitle: '3.2 静脈血栓塞栓症（VTE）予防', getData: () => typeof SEC32_DATA !== 'undefined' ? SEC32_DATA : null },
+        { viewId: 'view-sec-3-3', secCode: 'sec33', secTitle: '3.3 嚥下障害と栄養管理', getData: () => typeof SEC33_DATA !== 'undefined' ? SEC33_DATA : null },
+        { viewId: 'view-sec-3-4', secCode: 'sec34', secTitle: '3.4 膀胱および腸管管理', getData: () => typeof SEC34_DATA !== 'undefined' ? SEC34_DATA : null },
+        { viewId: 'view-sec-3-5', secCode: 'sec35', secTitle: '3.5 睡眠障害・睡眠時無呼吸', getData: () => typeof SEC35_DATA !== 'undefined' ? SEC35_DATA : null },
+        { viewId: 'view-sec-3-6', secCode: 'sec36', secTitle: '3.6 脳卒中後疼痛・肩関節痛', getData: () => typeof SEC36_DATA !== 'undefined' ? SEC36_DATA : null },
+        { viewId: 'view-sec-3-7', secCode: 'sec37', secTitle: '3.7 感情・気分障害（うつ・不安）', getData: () => typeof SEC37_DATA !== 'undefined' ? SEC37_DATA : null },
+        { viewId: 'view-sec-3-8', secCode: 'sec38', secTitle: '3.8 骨健康・骨粗鬆症・転倒予防', getData: () => typeof SEC38_DATA !== 'undefined' ? SEC38_DATA : null },
+        { viewId: 'view-sec-3-9', secCode: 'sec39', secTitle: '3.9 痙縮管理（薬物療法・ボツリヌス）', getData: () => typeof SEC39_DATA !== 'undefined' ? SEC39_DATA : null },
+        // 第4章
+        { viewId: 'view-sec-4-1', secCode: 'sec41', secTitle: '4.1 障害およびリハビリテーションニーズの評価', getData: () => typeof SEC41_DATA !== 'undefined' ? SEC41_DATA : null },
+        { viewId: 'view-sec-4-2', secCode: 'sec42', secTitle: '4.2 身体的および認知的予後予測', getData: () => typeof SEC42_DATA !== 'undefined' ? SEC42_DATA : null },
+        { viewId: 'view-sec-4-3', secCode: 'sec43', secTitle: '4.3 認知機能障害およびスクリーニング', getData: () => typeof SEC43_DATA !== 'undefined' ? SEC43_DATA : null },
+        { viewId: 'view-sec-4-4', secCode: 'sec44', secTitle: '4.4 活動および参加の評価', getData: () => typeof SEC44_DATA !== 'undefined' ? SEC44_DATA : null },
+        { viewId: 'view-sec-4-5', secCode: 'sec45', secTitle: '4.5 介護者負担および心理社会的評価', getData: () => typeof SEC45_DATA !== 'undefined' ? SEC45_DATA : null },
+        // 第5章
+        { viewId: 'view-sec-5-1', secCode: 'sec51', secTitle: '5.1 身体活動・運動処方', getData: () => typeof SEC51_RECS !== 'undefined' ? SEC51_RECS : null },
+        { viewId: 'view-sec-5-2', secCode: 'sec52', secTitle: '5.2 早期離床・リハビリテーション強度', getData: () => typeof SEC52_RECS !== 'undefined' ? SEC52_RECS : null },
+        { viewId: 'view-sec-5-3', secCode: 'sec53', secTitle: '5.3 移動・バランス・転倒予防', getData: () => typeof SEC53_RECS !== 'undefined' ? SEC53_RECS : null },
+        { viewId: 'view-sec-5-4', secCode: 'sec54', secTitle: '5.4 車椅子・歩行補助具', getData: () => typeof SEC54_RECS !== 'undefined' ? SEC54_RECS : null },
+        { viewId: 'view-sec-5-5', secCode: 'sec55', secTitle: '5.5 歩行訓練・ロボット・装具', getData: () => typeof SEC55_RECS !== 'undefined' ? SEC55_RECS : null },
+        { viewId: 'view-sec-5-6', secCode: 'sec56', secTitle: '5.6 上肢機能・CI療法・ロボット', getData: () => typeof SEC56_RECS !== 'undefined' ? SEC56_RECS : null },
+        { viewId: 'view-sec-5-7', secCode: 'sec57', secTitle: '5.7 感覚障害・体性感覚訓練', getData: () => typeof SEC57_RECS !== 'undefined' ? SEC57_RECS : null },
+        { viewId: 'view-sec-5-8', secCode: 'sec58', secTitle: '5.8 痙縮治療（物理療法・手術療法）', getData: () => typeof SEC58_RECS !== 'undefined' ? SEC58_RECS : null },
+        { viewId: 'view-sec-5-9', secCode: 'sec59', secTitle: '5.9 視覚障害・半側空間無視', getData: () => typeof SEC59_RECS !== 'undefined' ? SEC59_RECS : null },
+        { viewId: 'view-sec-5-10', secCode: 'sec510', secTitle: '5.10 前庭障害・めまい', getData: () => typeof SEC510_RECS !== 'undefined' ? SEC510_RECS : null },
+        // 第6章
+        { viewId: 'view-sec-6-1', secCode: 'sec61', secTitle: '6.1 失語症・言語療法', getData: () => typeof SEC61_RECS !== 'undefined' ? SEC61_RECS : null },
+        { viewId: 'view-sec-6-2', secCode: 'sec62', secTitle: '6.2 構音障害・アプラキシア', getData: () => typeof SEC62_RECS !== 'undefined' ? SEC62_RECS : null },
+        { viewId: 'view-sec-6-3', secCode: 'sec63', secTitle: '6.3 認知リハビリテーション・記憶・注意', getData: () => typeof SEC63_RECS !== 'undefined' ? SEC63_RECS : null },
+        { viewId: 'view-sec-6-4', secCode: 'sec64', secTitle: '6.4 遂行機能障害・社会的行動障害', getData: () => typeof SEC64_RECS !== 'undefined' ? SEC64_RECS : null },
+        // 第7章
+        { viewId: 'view-sec-7-1', secCode: 'sec71', secTitle: '7.1 日常生活動作（ADL）・IADL', getData: () => typeof SEC71_RECS !== 'undefined' ? SEC71_RECS : null },
+        { viewId: 'view-sec-7-2', secCode: 'sec72', secTitle: '7.2 自動車運転・移動性', getData: () => typeof SEC72_RECS !== 'undefined' ? SEC72_RECS : null },
+        { viewId: 'view-sec-7-3', secCode: 'sec73', secTitle: '7.3 復職支援・職業リハビリテーション', getData: () => typeof SEC73_RECS !== 'undefined' ? SEC73_RECS : null },
+        { viewId: 'view-sec-7-4', secCode: 'sec74', secTitle: '7.4 地域復帰・社会参加・レクリエーション', getData: () => typeof SEC74_RECS !== 'undefined' ? SEC74_RECS : null },
+        { viewId: 'view-sec-7-5', secCode: 'sec75', secTitle: '7.5 性的機能・親密性', getData: () => typeof SEC75_RECS !== 'undefined' ? SEC75_RECS : null },
+        { viewId: 'view-sec-7-6', secCode: 'sec76', secTitle: '7.6 家族・介護者教育とサポート', getData: () => typeof SEC76_RECS !== 'undefined' ? SEC76_RECS : null },
+        { viewId: 'view-sec-7-7', secCode: 'sec77', secTitle: '7.7 遠隔リハビリテーション（Telerehabilitation）', getData: () => typeof SEC77_RECS !== 'undefined' ? SEC77_RECS : null },
+        { viewId: 'view-sec-7-8', secCode: 'sec78', secTitle: '7.8 長期管理と生活習慣改善', getData: () => typeof SEC78_RECS !== 'undefined' ? SEC78_RECS : null }
+      ];
+
+      dataSources.forEach(ds => {
+        let raw = null;
+        try { raw = ds.getData(); } catch (e) { }
+        if (!raw) return;
+
+        let recList = [];
+        if (Array.isArray(raw)) {
+          recList = raw;
+        } else if (raw && Array.isArray(raw.recommendations)) {
+          recList = raw.recommendations;
+        }
+
+        recList.forEach((r, idx) => {
+          const recNum = r.num || r.rec_num || r.id || (idx + 1);
+          const cor = r.cor || '';
+          const loe = r.loe || '';
+          const cat = r.category || '';
+          const jaText = cleanText(r.recJa || r.rec_ja || r.rec_text_ja || r.textJa || '');
+          const enText = cleanText(r.recEn || r.rec_en || r.rec_text_en || r.textEn || '');
+          const supJa = cleanText(r.supJa || r.supportJa || (r.support && r.support.ja) || r.support_text_ja || '');
+          const supEn = cleanText(r.supEn || r.supportEn || (r.support && r.support.en) || r.support_text_en || '');
+
+          const cardId = `${ds.secCode}-rec-item-${recNum}`;
+
+          // ① 推奨事項本文
+          if (jaText || enText) {
+            index.push({
+              type: 'recommendation',
+              typeLabel: `推奨 #${recNum}`,
+              viewId: ds.viewId,
+              secTitle: ds.secTitle,
+              recNum: recNum,
+              cor: cor,
+              loe: loe,
+              cardId: cardId,
+              jaText: (cat ? `[${cat}] ` : '') + jaText,
+              enText: enText,
+              fullText: `${ds.secTitle} ${cat} 推奨 ${recNum} ${cor} ${loe} ${jaText} ${enText}`.toLowerCase()
+            });
+          }
+
+          // ② 推奨別の補足説明（未選択でも検索可能にする！）
+          if (supJa || supEn) {
+            index.push({
+              type: 'support',
+              typeLabel: `推奨 #${recNum} 補足説明`,
+              viewId: ds.viewId,
+              secTitle: ds.secTitle,
+              recNum: recNum,
+              cor: cor,
+              loe: loe,
+              cardId: cardId,
+              jaText: supJa,
+              enText: supEn,
+              fullText: `${ds.secTitle} ${cat} 推奨 ${recNum} 補足説明 ${supJa} ${supEn}`.toLowerCase()
+            });
+          }
+        });
+      });
+
+      // 2. DOM上の解説カード・概要・第1章の各要素
+      document.querySelectorAll('.view-panel').forEach(panel => {
         const viewId = panel.id;
         if (!viewId) return;
 
-        // セクションタイトル
         const h1 = panel.querySelector('.section-hero h1, h1, h2');
-        let secTitle = h1 ? h1.innerText.split('\n')[0].trim() : viewId;
-        secTitle = secTitle.replace(/\s+/g, ' ');
+        let secTitle = h1 ? h1.innerText.split('\n')[0].trim().replace(/\s+/g, ' ') : viewId;
 
-        const tagElem = panel.querySelector('.section-hero-tag, .section-badge');
-        const secTag = tagElem ? tagElem.innerText.trim() : '';
-
-        // 1. 推奨事項カード
-        const recCards = panel.querySelectorAll('.rec-item-card, .rec-item, .rec-row');
-        recCards.forEach((card, idx) => {
-          let recNum = idx + 1;
-          const recBadge = card.querySelector('.rec-num-badge, .rec-id-badge');
-          if (recBadge) {
-            const m = recBadge.innerText.match(/\d+/);
-            if (m) recNum = parseInt(m[0], 10);
-          }
-
-          const corElem = card.querySelector('.cor-badge, [class*="cor"]');
-          const loeElem = card.querySelector('.loe-badge, [class*="loe"]');
-          const cor = corElem ? corElem.innerText.trim() : '';
-          const loe = loeElem ? loeElem.innerText.trim() : '';
-
-          const jaElem = card.querySelector('.rec-item-text-ja, .rec-ja-text, .rec-text-ja, .rec-content-ja') || card;
-          const enElem = card.querySelector('.rec-item-text-en, .rec-en-text, .rec-text-en, .rec-content-en');
-
-          const jaText = jaElem ? jaElem.innerText.trim() : '';
-          const enText = enElem ? enElem.innerText.trim() : '';
-
-          if (!card.id) {
-            card.id = `${viewId}-rec-${recNum}`;
-          }
-
-          index.push({
-            type: 'recommendation',
-            typeLabel: `推奨 ${recNum}`,
-            viewId: viewId,
-            secTitle: secTitle,
-            secTag: secTag,
-            recNum: recNum,
-            cor: cor,
-            loe: loe,
-            cardId: card.id,
-            jaText: jaText,
-            enText: enText,
-            fullText: `${secTitle} ${secTag} 推奨 ${recNum} ${cor} ${loe} ${jaText} ${enText}`.toLowerCase()
-          });
-        });
-
-        // 2. 概要 (Synopsis) や解説カード
-        const infoCards = panel.querySelectorAll('.bilingual-card, .thm-card, .method-card, .intro-card');
+        // 概要・導入・方法・テーマカード
+        const infoCards = panel.querySelectorAll('.bilingual-card, .thm-card, .method-card, .intro-card, .section-hero');
         infoCards.forEach((card, idx) => {
-          if (card.closest('.rec-item-card, .rec-item')) return;
+          if (card.closest('.rec-item-card, .rec-item, .mkc-rec-item')) return;
 
-          const cardTag = card.querySelector('.card-tag, .thm-card-tag, h3, h4');
+          const cardTag = card.querySelector('.card-tag, .thm-card-tag, .section-hero-tag, h3, h4');
           const cardTitle = cardTag ? cardTag.innerText.trim() : `解説 ${idx + 1}`;
-          const text = card.innerText.trim();
+          const text = cleanText(card.innerText);
+          if (!text) return;
 
           if (!card.id) {
             card.id = `${viewId}-card-${idx + 1}`;
@@ -14140,14 +14208,13 @@
             typeLabel: cardTitle,
             viewId: viewId,
             secTitle: secTitle,
-            secTag: secTag,
             recNum: null,
             cor: '',
             loe: '',
             cardId: card.id,
             jaText: text,
             enText: '',
-            fullText: `${secTitle} ${secTag} ${cardTitle} ${text}`.toLowerCase()
+            fullText: `${secTitle} ${cardTitle} ${text}`.toLowerCase()
           });
         });
       });
@@ -14160,7 +14227,6 @@
             typeLabel: `略語: ${abbr.abbr}`,
             viewId: 'view-ch1-abbr',
             secTitle: '第1章 略語一覧 (Abbreviations)',
-            secTag: 'Chapter 1: Abbreviations',
             recNum: null,
             cor: '',
             loe: '',
@@ -14307,8 +14373,15 @@
           target = document.getElementById(cardId);
         }
         if (!target && recNum) {
-          target = document.querySelector(`#${viewId} .rec-item-card:nth-child(${recNum})`)
-                || document.querySelector(`#${viewId} .rec-item:nth-child(${recNum})`);
+          const match = viewId.match(/view-sec-(\d+)-(\d+)/);
+          if (match) {
+            const secCode = `sec${match[1]}${match[2]}`;
+            target = document.getElementById(`${secCode}-rec-item-${recNum}`)
+                  || document.getElementById(`sec${match[1]}${match[2]}-rec-${recNum}`)
+                  || document.querySelector(`#${viewId} .mkc-rec-item:nth-child(${recNum})`)
+                  || document.querySelector(`#${viewId} .rec-item-card:nth-child(${recNum})`)
+                  || document.querySelector(`#${viewId} .rec-item:nth-child(${recNum})`);
+          }
         }
 
         if (target) {
